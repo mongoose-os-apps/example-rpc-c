@@ -13,8 +13,8 @@
 #include "frozen/frozen.h"
 #include "fw/src/mgos_app.h"
 #include "fw/src/mgos_gpio.h"
+#include "fw/src/mgos_net.h"
 #include "fw/src/mgos_sys_config.h"
-#include "fw/src/mgos_wifi.h"
 
 #if CS_PLATFORM == CS_P_ESP8266
 /* On ESP-12E there is a blue LED connected to GPIO2 (aka U1TX). */
@@ -113,9 +113,11 @@ static void call_peer(void) {
   call_specific_peer(peer);
 }
 
-void wifi_changed(enum mgos_wifi_status ev, void *arg) {
-  if (ev != MGOS_WIFI_IP_ACQUIRED) return;
+void net_changed(enum mgos_net_event ev,
+                 const struct mgos_net_event_data *ev_data, void *arg) {
+  if (ev != MGOS_NET_EV_IP_ACQUIRED) return;
   call_peer();
+  (void) ev_data;
   (void) arg;
 }
 
@@ -147,7 +149,7 @@ enum mgos_app_init_result mgos_app_init(void) {
   mg_rpc_add_handler(c, "Example.Increment", "{num: %d}", inc_handler, NULL);
   mg_rpc_add_handler(c, "Example.CallPeer", "{peer: %Q}", call_peer_handler,
                      NULL);
-  mgos_wifi_add_on_change_cb(wifi_changed, NULL);
+  mgos_net_add_event_handler(net_changed, NULL);
   mgos_gpio_set_mode(LED_GPIO, MGOS_GPIO_MODE_OUTPUT);
   mgos_gpio_set_button_handler(BUTTON_GPIO, BUTTON_PULL, BUTTON_EDGE,
                                50 /* debounce_ms */, button_cb, NULL);
