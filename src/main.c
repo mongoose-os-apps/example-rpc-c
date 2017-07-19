@@ -11,10 +11,10 @@
 #include "common/json_utils.h"
 #include "common/platform.h"
 #include "frozen/frozen.h"
-#include "fw/src/mgos_app.h"
-#include "fw/src/mgos_gpio.h"
-#include "fw/src/mgos_net.h"
-#include "fw/src/mgos_sys_config.h"
+#include "mgos_app.h"
+#include "mgos_gpio.h"
+#include "mgos_net.h"
+#include "mgos_sys_config.h"
 
 #if CS_PLATFORM == CS_P_ESP8266
 /* On ESP-12E there is a blue LED connected to GPIO2 (aka U1TX). */
