@@ -13,6 +13,7 @@ config_schema:
   - ["c_rpc", "o", {"title": "c_rpc app settings"}]
   - ["c_rpc.peer", "s", "", {"title": "Peer address"}]
 libs:
+  - origin: https://github.com/mongoose-os-libs/http-server
   - origin: https://github.com/mongoose-os-libs/rpc-loopback
   - origin: https://github.com/mongoose-os-libs/rpc-mqtt
   - origin: https://github.com/mongoose-os-libs/rpc-service-config
@@ -22,6 +23,7 @@ libs:
   - origin: https://github.com/mongoose-os-libs/rpc-service-ota
   - origin: https://github.com/mongoose-os-libs/rpc-uart
   - origin: https://github.com/mongoose-os-libs/spi
+  - origin: https://github.com/mongoose-os-libs/wifi
 
 tags:
   - c
