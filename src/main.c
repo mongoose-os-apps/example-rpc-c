@@ -104,7 +104,7 @@ static void call_specific_peer(const char *peer) {
 }
 
 static void call_peer(void) {
-  const char *peer = get_cfg()->c_rpc.peer;
+  const char *peer = mgos_sys_config_get_c_rpc_peer();
   if (peer == NULL) {
     LOG(LL_INFO, ("Peer address not configured, set c_rpc.peer (e.g. "
                   "ws://192.168.1.234/rpc)"));
