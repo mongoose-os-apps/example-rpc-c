@@ -15,6 +15,7 @@
 #include "mgos_gpio.h"
 #include "mgos_net.h"
 #include "mgos_sys_config.h"
+#include "mgos_timers.h"
 
 #if CS_PLATFORM == CS_P_ESP8266
 /* On ESP-12E there is a blue LED connected to GPIO2 (aka U1TX). */
@@ -144,6 +145,26 @@ static void call_peer_handler(struct mg_rpc_request_info *ri, void *cb_arg,
   (void) fi;
 }
 
+static void rpc_info_timer_cb(void *arg) {
+  struct mg_rpc_channel_info *cici = NULL;
+  int num_ci = 0;
+  if (!mg_rpc_get_channel_info(mgos_rpc_get_global(), &cici, &num_ci)) return;
+  if (num_ci > 0) {
+    LOG(LL_INFO, ("RPC channels (%d):", num_ci));
+    for (int i = 0; i < num_ci; i++) {
+      const struct mg_rpc_channel_info *ci = &cici[i];
+      LOG(LL_INFO, ("  %d: type: %.*s, info: %.*s, dst: %.*s, open? %d, "
+                    "persistent? %d, bcast_enabled? %d",
+                    i, (int) ci->type.len, (ci->type.p ? ci->type.p : ""),
+                    (int) ci->info.len, (ci->info.p ? ci->info.p : ""),
+                    (int) ci->dst.len, (ci->dst.p ? ci->dst.p : ""),
+                    ci->is_open, ci->is_persistent, ci->is_broadcast_enabled));
+    }
+  }
+  mg_rpc_channel_info_free_all(cici, num_ci);
+  (void) arg;
+}
+
 enum mgos_app_init_result mgos_app_init(void) {
   struct mg_rpc *c = mgos_rpc_get_global();
   mg_rpc_add_handler(c, "Example.Increment", "{num: %d}", inc_handler, NULL);
@@ -153,5 +174,6 @@ enum mgos_app_init_result mgos_app_init(void) {
   mgos_gpio_set_mode(LED_GPIO, MGOS_GPIO_MODE_OUTPUT);
   mgos_gpio_set_button_handler(BUTTON_GPIO, BUTTON_PULL, BUTTON_EDGE,
                                50 /* debounce_ms */, button_cb, NULL);
+  mgos_set_timer(1000, MGOS_TIMER_REPEAT, rpc_info_timer_cb, NULL);
   return MGOS_APP_INIT_SUCCESS;
 }
