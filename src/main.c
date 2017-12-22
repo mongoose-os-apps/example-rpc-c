@@ -114,11 +114,10 @@ static void call_peer(void) {
   call_specific_peer(peer);
 }
 
-void net_changed(enum mgos_net_event ev,
-                 const struct mgos_net_event_data *ev_data, void *arg) {
+void net_changed(int ev, void *evd, void *arg) {
   if (ev != MGOS_NET_EV_IP_ACQUIRED) return;
   call_peer();
-  (void) ev_data;
+  (void) evd;
   (void) arg;
 }
 
@@ -170,7 +169,7 @@ enum mgos_app_init_result mgos_app_init(void) {
   mg_rpc_add_handler(c, "Example.Increment", "{num: %d}", inc_handler, NULL);
   mg_rpc_add_handler(c, "Example.CallPeer", "{peer: %Q}", call_peer_handler,
                      NULL);
-  mgos_net_add_event_handler(net_changed, NULL);
+  mgos_event_add_group_handler(MGOS_EVENT_GRP_NET, net_changed, NULL);
   mgos_gpio_set_mode(LED_GPIO, MGOS_GPIO_MODE_OUTPUT);
   mgos_gpio_set_button_handler(BUTTON_GPIO, BUTTON_PULL, BUTTON_EDGE,
                                50 /* debounce_ms */, button_cb, NULL);
