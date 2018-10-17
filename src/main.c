@@ -29,40 +29,6 @@
 #include "mgos_sys_config.h"
 #include "mgos_timers.h"
 
-#if CS_PLATFORM == CS_P_ESP8266
-/* On ESP-12E there is a blue LED connected to GPIO2 (aka U1TX). */
-#define LED_GPIO 2
-#define BUTTON_GPIO 0 /* Usually a "Flash" button. */
-#define BUTTON_PULL MGOS_GPIO_PULL_UP
-#define BUTTON_EDGE MGOS_GPIO_INT_EDGE_POS
-#elif CS_PLATFORM == CS_P_ESP32
-/* Unfortunately, there is no LED on DevKitC, so this is random GPIO. */
-#define LED_GPIO 17
-#define BUTTON_GPIO 0 /* Usually a "Flash" button. */
-#define BUTTON_PULL MGOS_GPIO_PULL_UP
-#define BUTTON_EDGE MGOS_GPIO_INT_EDGE_POS
-#elif CS_PLATFORM == CS_P_CC3200 || CS_PLATFORM == CS_P_CC3220
-/* On CC3200 LAUNCHXL pin 64 is the red LED. */
-#define LED_GPIO 64                     /* The red LED on LAUNCHXL */
-#define BUTTON_GPIO 15                  /* SW2 on LAUNCHXL */
-#define BUTTON_PULL MGOS_GPIO_PULL_NONE /* External pull-downs */
-#define BUTTON_EDGE MGOS_GPIO_INT_EDGE_NEG
-#elif(CS_PLATFORM == CS_P_STM32) && defined(BSP_NUCLEO_F746ZG)
-/* Nucleo-144 F746 */
-#define LED_GPIO STM32_PIN_PB7     /* Blue LED */
-#define BUTTON_GPIO STM32_PIN_PC13 /* Blue user button */
-#define BUTTON_PULL MGOS_GPIO_PULL_NONE
-#define BUTTON_EDGE MGOS_GPIO_INT_EDGE_POS
-#elif(CS_PLATFORM == CS_P_STM32) && defined(BSP_DISCO_F746G)
-/* Discovery-0 F746 */
-#define LED_GPIO STM32_PIN_PI1     /* Green LED */
-#define BUTTON_GPIO STM32_PIN_PI11 /* Blue user button */
-#define BUTTON_PULL MGOS_GPIO_PULL_NONE
-#define BUTTON_EDGE MGOS_GPIO_INT_EDGE_POS
-#else
-#error Unknown platform
-#endif
-
 static void inc_handler(struct mg_rpc_request_info *ri, void *cb_arg,
                         struct mg_rpc_frame_info *fi, struct mg_str args) {
   struct mbuf fb;
@@ -77,7 +43,7 @@ static void inc_handler(struct mg_rpc_request_info *ri, void *cb_arg,
     json_printf(&out, "{error: %Q}", "num is required");
   }
 
-  mgos_gpio_toggle(LED_GPIO);
+  mgos_gpio_toggle(mgos_sys_config_get_board_led1_pin());
 
   printf("%d + 1 = %d\n", num, num + 1);
 
@@ -98,6 +64,9 @@ static void rpc_resp(struct mg_rpc *c, void *cb_arg,
   if (error_code == 0 && result.len > 0) {
     LOG(LL_INFO, ("response: %.*s", (int) result.len, result.p));
     json_scanf(result.p, result.len, "{num: %d}", &peer_num);
+  } else {
+    LOG(LL_INFO,
+        ("error: %d %.*s", error_code, (int) error_msg.len, error_msg.p));
   }
 
   (void) c;
@@ -182,9 +151,22 @@ enum mgos_app_init_result mgos_app_init(void) {
   mg_rpc_add_handler(c, "Example.CallPeer", "{peer: %Q}", call_peer_handler,
                      NULL);
   mgos_event_add_group_handler(MGOS_EVENT_GRP_NET, net_changed, NULL);
-  mgos_gpio_set_mode(LED_GPIO, MGOS_GPIO_MODE_OUTPUT);
-  mgos_gpio_set_button_handler(BUTTON_GPIO, BUTTON_PULL, BUTTON_EDGE,
-                               50 /* debounce_ms */, button_cb, NULL);
+  int led_pin = mgos_sys_config_get_board_led1_pin();
+  mgos_gpio_set_mode(led_pin, MGOS_GPIO_MODE_OUTPUT);
+  mgos_gpio_write(led_pin, !mgos_sys_config_get_board_led1_active_high());
+
+  enum mgos_gpio_pull_type btn_pull;
+  enum mgos_gpio_int_mode btn_int_edge;
+  if (mgos_sys_config_get_board_btn1_pull_up()) {
+    btn_pull = MGOS_GPIO_PULL_UP;
+    btn_int_edge = MGOS_GPIO_INT_EDGE_NEG;
+  } else {
+    btn_pull = MGOS_GPIO_PULL_DOWN;
+    btn_int_edge = MGOS_GPIO_INT_EDGE_POS;
+  }
+  mgos_gpio_set_button_handler(mgos_sys_config_get_board_btn1_pin(), btn_pull,
+                               btn_int_edge, 20 /* debounce_ms */, button_cb,
+                               NULL);
   mgos_set_timer(1000, MGOS_TIMER_REPEAT, rpc_info_timer_cb, NULL);
   return MGOS_APP_INIT_SUCCESS;
 }
